@@ -13,7 +13,8 @@
 
 class ThreadPool
 {
-    bool stop = false;  // 线程池终止标志位
+    // 线程池终止标志位
+    bool stop = false;  
     // 任务队列
     std::queue<std::function<void()> > work_queue;
     // 线程容器
@@ -26,11 +27,10 @@ class ThreadPool
     void woker_thread()
     {
         // 只要线程池没有终止, 工作线程就反复从任务队列取任务, 并执行任务,
-        std::cout << "worker thread." << std::endl;
-        std::cout << stop << std::endl;
-        while (!stop)
+        int i = 0;
+        while (1)
         {   
-            std::cout << "worker thread." << std::endl;
+            std::cout << "work thread " << std::this_thread::get_id() << " " << i << " times." << std::endl;
             std::function<void()> task;
             std::unique_lock<std::mutex> lock(this->queue_mutex);
             if (!this->work_queue.empty())
@@ -39,6 +39,7 @@ class ThreadPool
                 task = std::move(this->work_queue.front());
                 this->work_queue.pop();
                 task();
+                i++;
             }
             else if (this->stop)
             {
@@ -55,14 +56,16 @@ class ThreadPool
     ThreadPool(size_t thread_count)
     {
         try
-        {
+        {   
+            stop = false;
             for (unsigned i = 0; i < thread_count; ++i)
             {
                 threads.push_back(std::thread(&ThreadPool::woker_thread, this));
             }
         }
         catch (...)
-        {
+        {   
+            std::cout << "create ThreadPool Fail." << std::endl;
             stop = true;
             throw;
         }
@@ -86,7 +89,11 @@ class ThreadPool
     {
         {
             std::unique_lock<std::mutex> lock(queue_mutex);
-            if (stop) throw std::runtime_error("enqueque on stopped ThreadPool");
+            if (stop) 
+            {   
+                std::cout << "enqueque on stopped ThreadPool." << std::endl;
+                throw std::runtime_error("enqueque on stopped ThreadPool");
+            }
             work_queue.push(std::function<void()>(f));
         }
         this->condition.notify_one();
