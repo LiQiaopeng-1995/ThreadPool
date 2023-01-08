@@ -30,7 +30,7 @@ class ThreadPool
         int i = 0;
         while (1)
         {   
-            std::cout << "work thread " << std::this_thread::get_id() << " " << i << " times." << std::endl;
+            std::cout << "tid: " << std::this_thread::get_id() << " work " << i << " times." << std::endl;
             std::function<void()> task;
             std::unique_lock<std::mutex> lock(this->queue_mutex);
             if (!this->work_queue.empty())
@@ -57,6 +57,7 @@ class ThreadPool
     {
         try
         {   
+            // 初始化线程数为thread_count的线程池
             stop = false;
             for (unsigned i = 0; i < thread_count; ++i)
             {
@@ -72,12 +73,16 @@ class ThreadPool
     }
 
     ~ThreadPool()
-    {
-        {
+    {   
+        std::cout << std::this_thread::get_id() << ": ThreadPool deconstruct." << std::endl;
+        {   
+            // 加锁防止有工作线程取任务
             std::unique_lock<std::mutex> lock(queue_mutex);
             stop = true;
         }
+        // 通知所有线程继续执行
         condition.notify_all();
+        // 执行完所有线程
         for (std::thread &t : threads) 
         {   
             if (t.joinable()) t.join();
