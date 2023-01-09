@@ -3,7 +3,6 @@
 
 #include <condition_variable>
 #include <functional>
-#include <future>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -17,7 +16,7 @@ class ThreadPool
     // 线程池终止标志位
     bool stop = false;  
     // 任务队列
-    std::queue<std::function<void()> > work_queue;
+    std::queue<std::move_only_function<void()> > work_queue;
     // 线程容器
     std::vector<std::thread> threads;
 
@@ -31,7 +30,7 @@ class ThreadPool
         int i = 0;
         while (1)
         {   
-            std::cout << "work thread " << std::this_thread::get_id() << " " << i << " times." << std::endl;
+            std::cout << "tid: " << std::this_thread::get_id() << " work " << i << " times." << std::endl;
             std::function<void()> task;
             std::unique_lock<std::mutex> lock(this->queue_mutex);
             if (!this->work_queue.empty())
@@ -58,6 +57,7 @@ class ThreadPool
     {
         try
         {   
+            // 初始化线程数为thread_count的线程池
             stop = false;
             for (unsigned i = 0; i < thread_count; ++i)
             {
@@ -73,12 +73,16 @@ class ThreadPool
     }
 
     ~ThreadPool()
-    {
-        {
+    {   
+        std::cout << std::this_thread::get_id() << ": ThreadPool deconstruct." << std::endl;
+        {   
+            // 加锁防止有工作线程取任务
             std::unique_lock<std::mutex> lock(queue_mutex);
             stop = true;
         }
+        // 通知所有线程继续执行
         condition.notify_all();
+        // 执行完所有线程
         for (std::thread &t : threads) 
         {   
             if (t.joinable()) t.join();
@@ -99,33 +103,6 @@ class ThreadPool
         }
         this->condition.notify_one();
     }
-
-    template<typename FunctionType>
-	std::future<typename std::result_of<F()>::type> 
-		ThreadPool::submit(typename FunctionType&& f) 
-	{
-		using return_type = typename std::result_of<FunctionType()>::type;
-		auto task = std::make_shared< std::packaged_task<return_type()> >(
-				std::bind(std::forward<F>(f))
-			);
-        
-		std::future<return_type> res = task->get_future();
-		{
-			std::unique_lock<std::mutex> lock(queue_mutex);
-
-			// don't allow enqueueing after stopping the pool
-			if(stop)
-				throw std::runtime_error("enqueue on stopped ThreadPool");
-
-			tasks.emplace([task](){ (*task)(); });
-		}
-		condition.notify_one();
-		return res;
-	}
 };
 
-#endif   
-
-
-
-
+#endif 
