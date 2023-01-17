@@ -3,20 +3,21 @@
 
 #include <condition_variable>
 #include <functional>
+#include <future>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <queue>
 #include <stdexcept>
 #include <thread>
 #include <vector>
-#include <iostream>
 
 class ThreadPool
 {
     // 线程池终止标志位
-    bool stop = false;  
+    bool stop = false;
     // 任务队列
-    std::queue<std::move_only_function<void()> > work_queue;
+    std::queue<std::move_only_function<void()>> work_queue;
     // 线程容器
     std::vector<std::thread> threads;
 
@@ -29,9 +30,10 @@ class ThreadPool
         // 只要线程池没有终止, 工作线程就反复从任务队列取任务, 并执行任务,
         int i = 0;
         while (1)
-        {   
-            std::cout << "tid: " << std::this_thread::get_id() << " work " << i << " times." << std::endl;
-            std::function<void()> task;
+        {
+            std::cout << "tid: " << std::this_thread::get_id() << " work " << i << " times."
+                      << std::endl;
+            std::move_only_function<void()> task;
             std::unique_lock<std::mutex> lock(this->queue_mutex);
             if (!this->work_queue.empty())
             {
@@ -56,7 +58,7 @@ class ThreadPool
     ThreadPool(size_t thread_count)
     {
         try
-        {   
+        {
             // 初始化线程数为thread_count的线程池
             stop = false;
             for (unsigned i = 0; i < thread_count; ++i)
@@ -65,7 +67,7 @@ class ThreadPool
             }
         }
         catch (...)
-        {   
+        {
             std::cout << "create ThreadPool Fail." << std::endl;
             stop = true;
             throw;
@@ -73,9 +75,9 @@ class ThreadPool
     }
 
     ~ThreadPool()
-    {   
+    {
         std::cout << std::this_thread::get_id() << ": ThreadPool deconstruct." << std::endl;
-        {   
+        {
             // 加锁防止有工作线程取任务
             std::unique_lock<std::mutex> lock(queue_mutex);
             stop = true;
@@ -83,8 +85,8 @@ class ThreadPool
         // 通知所有线程继续执行
         condition.notify_all();
         // 执行完所有线程
-        for (std::thread &t : threads) 
-        {   
+        for (std::thread &t : threads)
+        {
             if (t.joinable()) t.join();
         }
     }
@@ -94,8 +96,8 @@ class ThreadPool
     {
         {
             std::unique_lock<std::mutex> lock(queue_mutex);
-            if (stop) 
-            {   
+            if (stop)
+            {
                 std::cout << "enqueque on stopped ThreadPool." << std::endl;
                 throw std::runtime_error("enqueque on stopped ThreadPool");
             }
@@ -103,6 +105,36 @@ class ThreadPool
         }
         this->condition.notify_one();
     }
+
+    template <typename Function, typename... Args,
+              typename ReturnType = std::invoke_result_t<Function &&, Args &&...>>
+    requires std::invocable<Function, Args...>
+    [[nodiscard]] std::future<ReturnType> enqueue(Function &&f, Args &&...args)
+    {
+        std::promise<ReturnType> promise;
+        auto future = promise.get_future();
+        auto task = [func = std::move(f), ... largs = std::move(args),
+                     promise = std::move(promise)]() mutable
+        {
+            try
+            {
+                promise.set_value(func(largs...));
+            }
+            catch (...)
+            {
+                promise.set_exception(std::current_exception());
+            }
+        };
+        enqueue_task(std::move(task));
+        return future;
+    }
+
+    template <typename Function>
+    void enqueue_task(Function &&f)
+    {
+        std::unique_lock<std::mutex> lock(queue_mutex);
+        work_queue.push(std::forward<Function>(f));
+    }
 };
 
-#endif 
+#endif
