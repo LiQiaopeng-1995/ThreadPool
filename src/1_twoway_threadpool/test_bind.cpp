@@ -45,18 +45,11 @@ int simpleMixF(int& a, noncopyable_object& b) { return a + *b.data.get(); }
 int main()
 {
     ThreadPool tp(1);
-    // 通过
+    // 通过, 只可拷贝
     {
         auto ret = tp.enqueue(copyF, 1, 2);
         std::cout << "copy:" << ret.get() << std::endl;
     }
-    // 未通过
-    {
-        // copyonly_object a(7);
-        // noncopyable_object b(8);
-        // auto ret = tp.enqueue(&simpleMixF, 7, b);
-        // std::cout << ret.get() << std::endl;
-    } 
     // 未通过
     {
         // noncopyable_object a(3);
@@ -64,6 +57,13 @@ int main()
         // auto ret = tp.enqueue(moveF, a,b);
         // std::cout << "move:" << ret.get() << std::endl;
     }  
+    // 未通过
+    {
+        // copyonly_object a(7);
+        // noncopyable_object b(8);
+        // auto ret = tp.enqueue(&simpleMixF, 7, b);
+        // std::cout << ret.get() << std::endl;
+    } 
     // 通过
     {  
         copyonly_object a(5);

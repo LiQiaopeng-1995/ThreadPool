@@ -38,17 +38,17 @@ class noncopyable_object
 };
 
 int copyF(copyonly_object a, copyonly_object b) { return a.data + b.data; }
-int moveF(noncopyable_object& a, noncopyable_object& b) { return *a.data.get() + *b.data.get(); }
+int moveF(noncopyable_object& a, noncopyable_object& b) { return *a.data + *b.data; }
 
-int mixF(copyonly_object a, noncopyable_object& b) { return a.data + *b.data.get(); }
-int simpleMixF(int& a, noncopyable_object& b) { return a + *b.data.get(); }
+int mixF(copyonly_object a, noncopyable_object& b) { return a.data + *b.data; }
+int simpleMixF(int& a, noncopyable_object& b) { return a + *b.data; }
 int main()
 {
     ThreadPool tp(1);
     // 通过
     {
-        auto ret = tp.enqueue(copyF, 1, 2);
-        std::cout << "copy:" << ret.get() << std::endl;
+        // auto ret = tp.enqueue(copyF, 1, 2);
+        // std::cout << "copy:" << ret.get() << std::endl;
     }
     // 通过
     {
@@ -59,11 +59,11 @@ int main()
     }  
     // 通过
     {  
-        copyonly_object a(5);
-        copyonly_object b(6);
-        auto task = std::bind(copyF, a, b);
-        int i = task();
-        std::cout << "bind copyF without forward:" << i << std::endl;
+        // copyonly_object a(5);
+        // copyonly_object b(6);
+        // auto task = std::bind(copyF, a, b);
+        // int i = task();
+        // std::cout << "bind copyF without forward:" << i << std::endl;
     }
     // 未通过, 无法推导ReturnType的参数
     {
@@ -75,11 +75,11 @@ int main()
 
     // 通过
     {
-        copyonly_object a(5);
-        noncopyable_object b(6);
-        auto task = std::bind(mixF, std::forward<copyonly_object>(a), std::forward<noncopyable_object>(b));
-        int i = task();
-        std::cout << "mix:" << i << std::endl;
+        // copyonly_object a(5);
+        // noncopyable_object b(6);
+        // auto task = std::bind(mixF, std::forward<copyonly_object>(a), std::forward<noncopyable_object>(b));
+        // int i = task();
+        // std::cout << "mix:" << i << std::endl;
     }
     // 未通过
     {  

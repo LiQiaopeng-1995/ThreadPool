@@ -31,8 +31,8 @@ class ThreadPool
         int i = 0;
         while (1)
         {
-            std::cout << "tid: " << std::this_thread::get_id() << " work " << i << " times."
-                      << std::endl;
+            // std::cout << "tid: " << std::this_thread::get_id() << " work " << i << " times."
+            //           << std::endl;
             std::move_only_function<void()> task;
             std::unique_lock<std::mutex> lock(this->queue_mutex);
             if (!this->work_queue.empty())
@@ -109,7 +109,7 @@ class ThreadPool
     template <typename Function, typename... Args,
               typename ReturnType = std::invoke_result_t<Function &&, Args &&...>>
     requires std::invocable<Function, Args...>
-    [[nodiscard]] std::future<ReturnType> enqueue(Function &&f, Args &&...args)
+    [[nodiscard]] std::future<ReturnType> enqueue(Function &&f, Args &&... args)
     {
         std::promise<ReturnType> promise;
         auto future = promise.get_future();
@@ -124,6 +124,7 @@ class ThreadPool
             {
                 promise.set_exception(std::current_exception());
             }
+
         };
         enqueue_task(std::move(task));
         return future;
