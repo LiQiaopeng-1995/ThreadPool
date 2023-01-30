@@ -1,7 +1,5 @@
 add_executable(test_bind test_bind.cpp)
 
-
-
 project (twoway_thread_pool)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

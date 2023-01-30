@@ -8,8 +8,8 @@ class copyonly_object
    public:
     copyonly_object(int i) : data(i){};
     copyonly_object() = default;
-    // copyonly_object(copyonly_object&& other) = delete;
-    // copyonly_object& operator=(copyonly_object&& other) = delete;
+    copyonly_object(copyonly_object&& other) = delete;
+    copyonly_object& operator=(copyonly_object&& other) = delete;
     copyonly_object(const copyonly_object& other) : data(other.data){};
     copyonly_object(copyonly_object& other) : data(other.data){};
     copyonly_object& operator=(const copyonly_object& other)
@@ -41,7 +41,7 @@ int copyF(copyonly_object a, copyonly_object b) { return a.data + b.data; }
 int moveF(noncopyable_object& a, noncopyable_object& b) { return *a.data + *b.data; }
 
 int mixF(copyonly_object a, noncopyable_object& b) { return a.data + *b.data; }
-int simpleMixF(int& a, noncopyable_object& b) { return a + *b.data; }
+int simpleMixF(int a, noncopyable_object& b) { return a + *b.data; }
 int main()
 {
     ThreadPool tp(1);
@@ -52,25 +52,17 @@ int main()
     }
     // 通过
     {
-        noncopyable_object a(3);
-        noncopyable_object b(4);
-        auto ret = tp.enqueue(moveF, a,b);
-        std::cout << "move:" << ret.get() << std::endl;
+        // noncopyable_object a(3);
+        // noncopyable_object b(4);
+        // auto ret = tp.enqueue(moveF, a,b);
+        // std::cout << "move:" << ret.get() << std::endl;
     }  
-    // 通过
-    {  
-        // copyonly_object a(5);
-        // copyonly_object b(6);
-        // auto task = std::bind(copyF, a, b);
-        // int i = task();
-        // std::cout << "bind copyF without forward:" << i << std::endl;
-    }
     // 未通过, 无法推导ReturnType的参数
     {
-        // copyonly_object a(7);
-        // noncopyable_object b(8);
-        // auto ret = tp.enqueue(&simpleMixF, a, b);
-        // std::cout << ret.get() << std::endl;
+        copyonly_object a(7);
+        noncopyable_object b(8);
+        auto ret = tp.enqueue(simpleMixF, 7, b);
+        std::cout << ret.get() << std::endl;
     } 
 
     // 通过

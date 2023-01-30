@@ -82,11 +82,11 @@ int main()
     }
     // 未通过
     {  
-        // copyonly_object a(5);
-        // noncopyable_object b(6);
-        // auto task = std::bind(mixF, std::forward<copyonly_object>(a), b);
-        // int i = task();
-        // std::cout << "mix:" << i << std::endl;
+        copyonly_object a(5);
+        noncopyable_object b(6);
+        auto task = std::bind(mixF, a, std::forward<noncopyable_object>(b));
+        int i = task();
+        std::cout << "mix:" << i << std::endl;
     }
     return 0;
 }

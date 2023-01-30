@@ -3,6 +3,7 @@
 void f()
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::cout << "tid: " << std::this_thread::get_id() << " sleep 100 ms." << std::endl;
 }
 int main()
 {   
